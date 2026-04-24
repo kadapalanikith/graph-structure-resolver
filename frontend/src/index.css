@@ -1,0 +1,149 @@
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+textarea {
+  width: 100%;
+  height: 120px;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-family: monospace;
+  font-size: 1rem;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+button {
+  background-color: #3b82f6;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  width: 100%;
+  transition: background-color 0.2s;
+  font-weight: 600;
+}
+
+button:hover {
+  background-color: #2563eb;
+}
+
+button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.error-message {
+  color: #ef4444;
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: #fee2e2;
+  border-radius: 0.5rem;
+  border: 1px solid #f87171;
+}
+
+.response-section {
+  margin-top: 2rem;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.response-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0.5rem;
+}
+
+.tree-container {
+  margin-top: 1rem;
+  padding-left: 1rem;
+}
+
+.tree-node {
+  margin-left: 1.5rem;
+  position: relative;
+}
+
+.tree-node::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -0.75rem;
+  width: 1px;
+  background-color: #d1d5db;
+}
+
+.tree-node:last-child::before {
+  height: 1.25rem;
+}
+
+.tree-node-content {
+  display: flex;
+  align-items: center;
+  padding: 0.25rem 0;
+}
+
+.tree-node-content::before {
+  content: '';
+  position: absolute;
+  top: 1rem;
+  left: -0.75rem;
+  width: 0.75rem;
+  height: 1px;
+  background-color: #d1d5db;
+}
+
+.node-label {
+  background-color: #e5e7eb;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+}
+
+.section {
+  margin-bottom: 1.5rem;
+}
+
+.section h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  color: #4b5563;
+}
+
+pre {
+  background-color: #f9fafb;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  overflow-x: auto;
+  font-size: 0.875rem;
+}

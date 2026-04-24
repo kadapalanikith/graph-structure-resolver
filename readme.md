@@ -21,10 +21,8 @@ You send a JSON array of strings like `["A->B", "A->C", "B->D"]`, and the API:
 
 | | URL |
 |---|---|
-| **API** | `https://your-backend.onrender.com/bfhl` |
-| **Frontend** | `https://your-app.vercel.app` |
-
-> Replace the above with your actual deployed URLs before submitting.
+| **API** | [`https://graph-structure-resolver.onrender.com/bfhl`](https://graph-structure-resolver.onrender.com/bfhl) |
+| **Frontend** | [`https://graph-structure-resolver.vercel.app`](https://graph-structure-resolver.vercel.app) |
 
 ---
 

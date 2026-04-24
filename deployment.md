@@ -43,9 +43,9 @@ We recommend using **Vercel** for fast React + Vite deployments.
    - **Root Directory**: `frontend` (Click 'Edit' and select the `frontend` folder).
 4. Expand **Environment Variables** and add your Backend API URL:
    - **Name**: `VITE_API_URL`
-   - **Value**: `<YOUR_BACKEND_RENDER_URL>/bfhl` (e.g., `https://bajaj-backend-xxxx.onrender.com/bfhl`)
-5. Click **Deploy**. Vercel will run `npm install` and `npm run build` automatically based on the `package.json` inside the frontend directory.
-6. Once completed, your frontend will be live and accessible via the provided Vercel URL.
+   - **Value**: `https://graph-structure-resolver.onrender.com/bfhl`
+5. Click **Deploy**. Vercel will run `npm install` and `npm run build` automatically.
+6. Live at: `https://graph-structure-resolver.vercel.app`
 
 ---
 

@@ -45,7 +45,7 @@ You send a JSON array of strings like `["A->B", "A->C", "B->D"]`, and the API:
 
 ```json
 {
-  "user_id": "kadapalavenkatanikithreddy_24042006",
+  "user_id": "kadapalavenkatanikithreddy_11012006",
   "email_id": "kv9529@srmist.edu.in",
   "college_roll_number": "RA2311003010214",
   "hierarchies": [

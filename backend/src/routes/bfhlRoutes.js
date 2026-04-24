@@ -1,6 +1,7 @@
 const express = require('express');
-const router = express.Router();
 const { processHierarchies } = require('../controllers/bfhlController');
+
+const router = express.Router();
 
 router.post('/', processHierarchies);
 

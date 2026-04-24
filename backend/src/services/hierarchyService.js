@@ -1,187 +1,205 @@
+// This is the core brain of the app. It takes a raw array of strings,
+// figures out which ones are valid edges, builds the trees, detects cycles,
+// and spits back everything the spec asks for.
+
 function processData(data) {
     const invalid_entries = [];
     const duplicate_edges = [];
     const valid_edges = [];
+
+    // track which edges we've seen to catch duplicates
     const seen_edges = new Set();
-    const parentOf = new Map(); // child -> parent
+    // once we flag an edge as duplicate we only want it in the list once
+    const already_flagged_dupe = new Set();
+
+    // child -> parent mapping; lets us check multi-parent situations quickly
+    const parentOf = new Map();
 
     const all_nodes = new Set();
-    const adj = new Map(); // parent -> [children]
+    // adjacency list: parent -> list of children
+    const adj = new Map();
 
-    // 1. Validation and Duplicates
-    for (let rawStr of data) {
-        if (typeof rawStr !== 'string') {
-            invalid_entries.push(String(rawStr));
-            continue;
-        }
-        const str = rawStr.trim();
-        if (!str) {
-            invalid_entries.push(rawStr);
+    // ── Step 1: walk through every input string and classify it ──────────────
+    for (const raw of data) {
+        // handle non-strings gracefully even though the spec says it'll be strings
+        if (typeof raw !== 'string') {
+            invalid_entries.push(String(raw));
             continue;
         }
 
-        const parts = str.split('->');
+        const entry = raw.trim();
+
+        // empty or whitespace-only
+        if (!entry) {
+            invalid_entries.push(raw);
+            continue;
+        }
+
+        const parts = entry.split('->');
+
+        // must split into exactly two parts on "->"
         if (parts.length !== 2) {
-            invalid_entries.push(rawStr);
+            invalid_entries.push(entry);
             continue;
         }
 
-        const [u, v] = parts;
-        if (u.length !== 1 || v.length !== 1 || !/[A-Z]/.test(u) || !/[A-Z]/.test(v)) {
-            invalid_entries.push(rawStr);
+        const [parent, child] = parts;
+
+        // each side must be a single A-Z character, nothing more
+        if (
+            parent.length !== 1 ||
+            child.length !== 1 ||
+            !/^[A-Z]$/.test(parent) ||
+            !/^[A-Z]$/.test(child)
+        ) {
+            invalid_entries.push(entry);
             continue;
         }
 
-        if (u === v) {
-            invalid_entries.push(rawStr);
+        // self-loops like "A->A" are invalid per the spec
+        if (parent === child) {
+            invalid_entries.push(entry);
             continue;
         }
 
-        const edgeKey = `${u}->${v}`;
+        const edgeKey = `${parent}->${child}`;
+
         if (seen_edges.has(edgeKey)) {
-            duplicate_edges.push(rawStr);
-        } else {
-            seen_edges.add(edgeKey);
-            // Multi-parent check
-            if (!parentOf.has(v)) {
-                parentOf.set(v, u);
-                valid_edges.push({ u, v });
-                all_nodes.add(u);
-                all_nodes.add(v);
-                
-                if (!adj.has(u)) adj.set(u, []);
-                adj.get(u).push(v);
+            // spec says: if the same edge shows up multiple times, add it to
+            // duplicate_edges exactly once regardless of how many times it repeats
+            if (!already_flagged_dupe.has(edgeKey)) {
+                already_flagged_dupe.add(edgeKey);
+                duplicate_edges.push(edgeKey);
             }
+            continue;
         }
+
+        // first time seeing this edge
+        seen_edges.add(edgeKey);
+
+        // diamond/multi-parent case: if the child already has a parent, ignore this edge silently
+        if (parentOf.has(child)) {
+            continue;
+        }
+
+        parentOf.set(child, parent);
+        valid_edges.push({ parent, child });
+        all_nodes.add(parent);
+        all_nodes.add(child);
+
+        if (!adj.has(parent)) adj.set(parent, []);
+        adj.get(parent).push(child);
     }
 
-    // 2. Connected Components
+    // ── Step 2: group nodes into connected components using union-find ───────
+    // using path compression but not rank since our trees are small anyway
     const uf = new Map();
-    const getRoot = (x) => {
+
+    const find = (x) => {
         if (!uf.has(x)) uf.set(x, x);
-        if (uf.get(x) !== x) uf.set(x, getRoot(uf.get(x)));
+        if (uf.get(x) !== x) uf.set(x, find(uf.get(x)));
         return uf.get(x);
     };
-    const union = (x, y) => {
-        const rootX = getRoot(x);
-        const rootY = getRoot(y);
-        if (rootX !== rootY) uf.set(rootX, rootY);
+
+    const unite = (x, y) => {
+        const rx = find(x);
+        const ry = find(y);
+        if (rx !== ry) uf.set(rx, ry);
     };
 
-    for (let {u, v} of valid_edges) {
-        union(u, v);
+    for (const { parent, child } of valid_edges) {
+        unite(parent, child);
     }
 
-    const groups = new Map(); // root -> set of nodes
-    for (let node of all_nodes) {
-        const root = getRoot(node);
-        if (!groups.has(root)) groups.set(root, new Set());
-        groups.get(root).add(node);
+    // collect each component's nodes
+    const components = new Map();
+    for (const node of all_nodes) {
+        const compId = find(node);
+        if (!components.has(compId)) components.set(compId, new Set());
+        components.get(compId).add(node);
     }
 
+    // ── Step 3: process each component → tree or cycle ───────────────────────
     const hierarchies = [];
     let total_trees = 0;
     let total_cycles = 0;
-    let largest_tree_depth = 0;
-    let largest_tree_root = null; // or empty string? we will see
+    let deepest = 0;
+    let deepest_root = null;
 
-    for (let [comp_root, group_nodes] of groups.entries()) {
-        let possible_roots = [];
-        for (let node of group_nodes) {
-            if (!parentOf.has(node)) {
-                possible_roots.push(node);
-            }
-        }
+    for (const nodes of components.values()) {
+        // a root is a node that has no parent within the valid edges
+        const roots = [...nodes].filter(n => !parentOf.has(n));
 
-        let root_for_hierarchy;
-        let has_cycle = false;
+        let treeRoot;
+        let isCycle = false;
 
-        if (possible_roots.length === 0) {
-            // pure cycle
-            let min_node = null;
-            for (let node of group_nodes) {
-                if (min_node === null || node < min_node) min_node = node;
-            }
-            root_for_hierarchy = min_node;
-            has_cycle = true;
+        if (roots.length === 0) {
+            // every node in this component is someone's child → pure cycle
+            // the spec says use the lexicographically smallest node as the root label
+            treeRoot = [...nodes].sort()[0];
+            isCycle = true;
         } else {
-            // Since max in-degree is 1, a weakly connected component without a cycle
-            // must be a tree and therefore has exactly 1 root.
-            root_for_hierarchy = possible_roots[0]; 
+            // with max in-degree of 1 and no cycle, there's always exactly one root
+            treeRoot = roots[0];
         }
 
-        let tree_obj = {};
-        let depth = 0;
-
-        if (has_cycle) {
+        if (isCycle) {
             total_cycles++;
-        } else {
-            const buildTree = (node) => {
-                const nodeObj = {};
-                const children = adj.get(node) || [];
-                children.sort(); // Lexicographical sort for consistency
-                for (let child of children) {
-                    nodeObj[child] = buildTree(child);
-                }
-                return nodeObj;
-            };
-
-            const getDepth = (node) => {
-                const children = adj.get(node) || [];
-                if (children.length === 0) return 1;
-                let maxChildDepth = 0;
-                for (let child of children) {
-                    maxChildDepth = Math.max(maxChildDepth, getDepth(child));
-                }
-                return 1 + maxChildDepth;
-            };
-
-            tree_obj[root_for_hierarchy] = buildTree(root_for_hierarchy);
-            depth = getDepth(root_for_hierarchy);
-            total_trees++;
-
-            if (depth > largest_tree_depth) {
-                largest_tree_depth = depth;
-                largest_tree_root = root_for_hierarchy;
-            } else if (depth === largest_tree_depth && largest_tree_root !== null) {
-                if (root_for_hierarchy < largest_tree_root) {
-                    largest_tree_root = root_for_hierarchy;
-                }
-            }
+            hierarchies.push({ root: treeRoot, tree: {}, has_cycle: true });
+            continue;
         }
 
-        const hierarchy = {
-            root: root_for_hierarchy,
-            tree: has_cycle ? {} : tree_obj,
+        // build the nested object representation of this tree
+        const buildTree = (node) => {
+            const obj = {};
+            // sort children alphabetically for consistent output
+            const kids = (adj.get(node) || []).slice().sort();
+            for (const kid of kids) {
+                obj[kid] = buildTree(kid);
+            }
+            return obj;
         };
 
-        if (has_cycle) {
-            hierarchy.has_cycle = true;
-        } else {
-            hierarchy.depth = depth;
+        // depth = number of nodes on the longest root-to-leaf path
+        const getDepth = (node) => {
+            const kids = adj.get(node) || [];
+            if (kids.length === 0) return 1;
+            return 1 + Math.max(...kids.map(getDepth));
+        };
+
+        const treeObj = { [treeRoot]: buildTree(treeRoot) };
+        const depth = getDepth(treeRoot);
+        total_trees++;
+
+        // keep track of which tree is the deepest (lex smaller root breaks ties)
+        if (depth > deepest || (depth === deepest && deepest_root && treeRoot < deepest_root)) {
+            deepest = depth;
+            deepest_root = treeRoot;
         }
 
-        hierarchies.push(hierarchy);
+        hierarchies.push({ root: treeRoot, tree: treeObj, depth });
     }
-    
-    // As per the example, if no largest_tree_root is found, it might need to be omitted or null.
-    // The example says "largest_tree_root": "A"
+
+    // sort hierarchies: non-cyclic trees first, then cycles; alphabetical by root within each group
+    hierarchies.sort((a, b) => {
+        if (a.has_cycle && !b.has_cycle) return 1;
+        if (!a.has_cycle && b.has_cycle) return -1;
+        return a.root < b.root ? -1 : a.root > b.root ? 1 : 0;
+    });
 
     return {
-        user_id: "kadap_24042026", // Update with user credentials if needed
-        email_id: "kadap@college.edu",
-        college_roll_number: "24CS1001",
-        hierarchies: hierarchies,
-        invalid_entries: invalid_entries,
-        duplicate_edges: duplicate_edges,
+        user_id: "kadapalavenkatanikithreddy_24042006",
+        email_id: "kv9529@srmist.edu.in",
+        college_roll_number: "RA2311003010214",
+        hierarchies,
+        invalid_entries,
+        duplicate_edges,
         summary: {
             total_trees,
             total_cycles,
-            ...(largest_tree_root ? { largest_tree_root } : { largest_tree_root: "" })
-        }
+            largest_tree_root: deepest_root || "",
+        },
     };
 }
 
-module.exports = {
-    processData
-};
+module.exports = { processData };

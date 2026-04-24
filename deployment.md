@@ -19,11 +19,10 @@ We recommend using **Render** as it natively supports Node.js web services and e
    - **Environment**: `Node`
    - **Build Command**: `npm install`
    - **Start Command**: `npm start`
-4. Expand **Advanced** and add Environment Variables (Optional):
-   - `PORT`: `5000` 
-   - `MONGO_URI`: Your MongoDB connection string (if you use MongoDB later).
+4. Expand **Advanced** and add Environment Variables:
+   - `PORT`: `5000` (Render sets this automatically, but you can override it)
 5. Click **Create Web Service**. Wait for the build to finish.
-6. Once deployed, note down the deployed URL (e.g., `https://bajaj-backend-xxxx.onrender.com`). You will use this in the Frontend configuration.
+6. Once deployed, copy the live URL (e.g., `https://bajaj-backend-xxxx.onrender.com`). You'll need it for the frontend.
 
 ---
 
